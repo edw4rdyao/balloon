@@ -15,30 +15,28 @@ public:
 	void GetCodeLength(Node p, uint16 l);
 	void GetHfmCode();
 	void ResetHfm();
-	void DestroyTree(Node p);
-
+	void DestroyTreeNode(Node p);
 	class Cmp{
 	public:
 		bool operator()(const Node& a, const Node& b) const {
-			return a->frequency > b->frequency;
+			return a->frequency_ > b->frequency_;
 		}
 	};
-
 private:
 
-	uint8* disToCode;			// distance¶ÔÓ¦µÄÇø¼äÂë(0-29)
-	uint16* codeExtraBits;		// Çø¼äÂëµÄextraBits(ÍØÕ¹Î»Êý)
-	uint16* codeBeginDis;		// Çø¼äÂëµÄdistance·¶Î§µÄÏÂÏÞ
-	uint16* codeLength;			// Çø¼äÂë¶ÔÓ¦µÄÂë×Ö³¤¶È
-	uint16* codeLengthCnt;		// ¸÷¸ö³¤¶ÈµÄÇø¼äÂë×Ö³öÏÖµÄ´ÎÊý
+	uint8* dis_to_ic_;			// distanceï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(0-29)
+	uint16* ic_extra_bits_;		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½extraBits(ï¿½ï¿½Õ¹Î»ï¿½ï¿½)
+	uint16* ic_begin_dis_;		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½distanceï¿½ï¿½Î§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	uint16* ic_code_len_;			// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½Ö³ï¿½ï¿½ï¿½
+	uint16* ic_code_len_cnt_;		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Èµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö³ï¿½ï¿½ÖµÄ´ï¿½ï¿½ï¿½
 
-	uint32* hfmCodeInt;		// Çø¼äÂë¶ÔÓ¦µÄÂë×Ö(ÕûÐÍ)
-	uint32* nextHfmCodeInt;	// ¸÷¸ö³¤¶ÈµÄÇø¼äÂë×ÖµÄÏÂÒ»¸öÂë×Ö(ÕûÐÍ)
-	BS* hfmCode;			// Çø¼äÂë¶ÔÓ¦µÄÂë×Ö(×Ö·û´®ÐÍ)
+	uint32* ic_code_int_;		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½)
+	uint32* next_len_code_int_;	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Èµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½)
+	bitstring* ic_code_;			// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(ï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½)
 
-	Node* codeNode;			// ÓÃÓÚ¹¹½¨Ô­Ê¼HuffmanÊ÷µÄ½ÚµãÊý×é
-	Node root;				// ¸ù½Úµã
-	priority_queue<Node, vector<Node>,  Cmp> nodeHeap;  // ¹¹½¨Ô­Ê¼HuffmanÊ÷Ê±µÄÐ¡¸ù¶Ñ
+	Node* ic_node_;			// ï¿½ï¿½ï¿½Ú¹ï¿½ï¿½ï¿½Ô­Ê¼Huffmanï¿½ï¿½ï¿½Ä½Úµï¿½ï¿½ï¿½ï¿½ï¿½
+	Node tree_root_;				// ï¿½ï¿½ï¿½Úµï¿½
+	std::priority_queue<Node, std::vector<Node>,  Cmp> node_heap_;  // ï¿½ï¿½ï¿½ï¿½Ô­Ê¼Huffmanï¿½ï¿½Ê±ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½ï¿½
 	friend class Deflate;
 	friend class Inflate;
 };

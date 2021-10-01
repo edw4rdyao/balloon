@@ -1,346 +1,337 @@
 #include "deflate.h"
-Deflate::Deflate()
-	:window(new uint8[2 * WSIZE]), lzHash(new HashTable(WSIZE)), 
-	disHuffman(new DisHuffman), llHuffman(new LlHuffman){
-	fBuff = new uint8[F_BUFFSIZE];	fBuffCnt = 0;
-	lBuff = new uint8[L_BUFFSIZE];	lBuffCnt = 0;
-	dBuff = new uint16[D_BUFFSIZE];	dBuffCnt = 0;
-	oBuff = new uint8[O_BUFFSIZE_D];	oBuffCnt = 0;
-	fO = NULL;
-	fI = NULL;
+Deflate::Deflate():
+	window_(new uint8[2 * WSIZE]),			lz77_hash_(new HashTable(WSIZE)), 
+	dis_hfm_tree_(new DisHuffman), 			ll_hfm_tree_(new LlHuffman),
+	flag_buffer_(new uint8[F_BUFFSIZE]),	flag_buffer_cnt_ (0),
+	ll_buffer_(new uint8[L_BUFFSIZE]), 		ll_buffer_cnt_ (0),
+	dis_buffer_(new uint16[D_BUFFSIZE]),	dis_buffer_cnt_ (0),
+	out_buffer_(new uint8[D_O_BUFFSIZE]), 	out_buffer_cnt_ (0),
+	flag_data_(0),							flag_bit_cnt_(0),
+	out_data_(0), 							out_bit_cnt_(0),
+	fp_out_ (NULL), 						fp_in_( NULL){
 }
 
 Deflate::~Deflate() {
-	delete[] window;
-	delete lzHash;
-	delete disHuffman;
-	delete llHuffman;
-	delete[] fBuff;
-	delete[] lBuff;
-	delete[] dBuff;
-	delete[] oBuff;
+	delete[] window_;
+	delete lz77_hash_;
+	delete dis_hfm_tree_;
+	delete ll_hfm_tree_;
+	delete[] flag_buffer_;
+	delete[] ll_buffer_;
+	delete[] dis_buffer_;
+	delete[] out_buffer_;
 }
 
 /*=========================================================
-¹¦ÄÜ£º	ºËÐÄÑ¹Ëõº¯Êý£¬½«ÎÄ¼þÍ¨¹ýDeflateËã·¨Ñ¹Ëõ
-ÃèÊö£º	Í¨¹ý»¬¶¯´°¿ÚÖÐµÄÏÈÐÐ»º³åÇø¶ÁÈ¡µÄ×Ö·û£¨ºÍÆäºóÁ½¸ö×Ö·û¹¹³É
-		µÄ×Ö·û´®£©½¨Á¢¹þÏ£±í£¬Í¬Ê±½¨Á¢Æ¥ÅäÁ´£¬ÔÙÓÃµ±Ç°´®Í¨¹ý¹þÏ£
-		±íµÄÆ¥ÅäÁ´²éÕÒ×î³¤Æ¥Åä£¬½«<³¤¶È£¬¾àÀë>¶ÔÌæ»»¸Ã´®£¨µ±ÕÒ²»
-		µ½Æ¥Åä¾Í²»×öÌæ»»£¬¼ÌÐø¶ÁÈëÏÂÒ»×Ö·û£©£»ÔÙ½«Ã¿¸öÎ»ÖÃ¶ÔÓ¦µÄ
-		±ê¼ÇÐÅÏ¢£¨ÊÇ·ñ±»¡®<³¤¶È£¬¾àÀë>¶Ô¡¯Ìæ»»ÁË£©Ð´Èëµ½»º³åÇø...
+
 =========================================================*/
-void Deflate::Compress(string fileName, string newFileName) {
-	// ´ò¿ªÎÄ¼þ
-	fO = fopen(newFileName.c_str(), "wb");
-	assert(fO);
-	fI = fopen(fileName.c_str(), "rb");
-	assert(fI);
+void Deflate::Compress(std::string file_name, std::string new_file_name) {
+	// ï¿½ï¿½ï¿½Ä¼ï¿½
+	fp_out_ = fopen(new_file_name.c_str(), "wb");
+	assert(fp_out_);
+	fp_in_ = fopen(file_name.c_str(), "rb");
+	assert(fp_in_);
 
-	// »ñÈ¡Ô­Ê¼ÎÄ¼þ´óÐ¡£¬²¢Êä³öµ½ÎÄ¼þ
-	fseek(fI, 0, SEEK_END);
-	uint64 fileSize = ftell(fI);
-	fwrite(&fileSize, sizeof(uint64), 1, fO);
-	fseek(fI, 0, SEEK_SET);
+	// ï¿½ï¿½È¡Ô­Ê¼ï¿½Ä¼ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½
+	fseek(fp_in_, 0, SEEK_END);
+	uint64 file_size = ftell(fp_in_);
+	fwrite(&file_size, sizeof(uint64), 1, fp_out_);
+	fseek(fp_in_, 0, SEEK_SET);
 
-	// ÏÈ´ÓÎÄ¼þÖÐ¶ÁÈ¡64K¸ö×Ö½Ú
-	auto lookAhead = fread(window, 1, WSIZE * 2, fI);
+	// ï¿½È´ï¿½ï¿½Ä¼ï¿½ï¿½Ð¶ï¿½È¡64Kï¿½ï¿½ï¿½Ö½ï¿½
+	auto look_ahead = fread(window_, 1, WSIZE * 2, fp_in_);
 
-	// ³õÊ¼»¯¹þÏ£µØÖ·
-	uint16 hashAdress = 0;
-	lzHash->HashFunction(hashAdress, window[0]);
-	lzHash->HashFunction(hashAdress, window[1]);
+	// ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½Ï£ï¿½ï¿½Ö·
+	uint16 hash_address = 0;
+	lz77_hash_->HashFunction(hash_address, window_[0]);
+	lz77_hash_->HashFunction(hash_address, window_[1]);
 
-	uint8 fData = 0;			// 8bits±ê¼ÇÐÅÏ¢
-	uint8 fBitCnt = 0;			// ±ê¼ÇÐÅÏ¢bitÎ»Êý
-	uint8 oData = 0;			// 8bitsÊä³öÐÅÏ¢
-	uint8 oBitCnt = 0;			// Êä³öÐÅÏ¢bitÎ»Êý
-	
-	uint16 strStart = 0;		// µ±Ç°Æ¥Åä²éÕÒµÄÎ»ÖÃ
-	uint16 matchHead = 0;		// µ±Ç°×Ö·û´®Æ¥Åä²éÕÒµÄÍ·Î»ÖÃ£¬ÈôÎª0ÔòÃ»ÓÐÕÒµ½Æ¥Åä´®
-	uint16 tMatchLength = 0;	// µ±Ç°Æ¥Åä³¤¶È
-	uint16 tMatchDistance = 0;	// µ±Ç°Æ¥Åä¾àÀë
+	uint16 str_start = 0;		// ï¿½ï¿½Ç°Æ¥ï¿½ï¿½ï¿½ï¿½Òµï¿½Î»ï¿½ï¿½
+	uint16 match_head = 0;		// ï¿½ï¿½Ç°ï¿½Ö·ï¿½ï¿½ï¿½Æ¥ï¿½ï¿½ï¿½ï¿½Òµï¿½Í·Î»ï¿½Ã£ï¿½ï¿½ï¿½Îª0ï¿½ï¿½Ã»ï¿½ï¿½ï¿½Òµï¿½Æ¥ï¿½ä´®
+	uint16 t_match_len = 0;	// ï¿½ï¿½Ç°Æ¥ï¿½ä³¤ï¿½ï¿½
+	uint16 t_match_dis = 0;	// ï¿½ï¿½Ç°Æ¥ï¿½ï¿½ï¿½ï¿½ï¿½
 
-	while (lookAhead) {
-		// ²åÈëÈý×Ö·û×Ö·û´®ÖÐµÄ×îºóÒ»¸ö×Ö·ûÒÔ¼ÆËã¹þÏ£µØÖ·
-		lzHash->Insert(matchHead, window[strStart + 2], strStart, hashAdress);
-		tMatchLength = 0;
-		tMatchDistance = 0;
-		// µ±»ñÈ¡µÄÆ¥ÅäÍ·²»Îª0£¬Ôò¼ÆËãÆ¥ÅäÁ´ÖÐµÄ×î³¤Æ¥Åä³¤¶È
-		if (matchHead) {
-			tMatchLength = GetMaxMatchLength(matchHead, tMatchDistance, strStart, lookAhead);
+	while (look_ahead) {
+		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½Ö·ï¿½ï¿½ï¿½ï¿½Ðµï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ö·ï¿½ï¿½Ô¼ï¿½ï¿½ï¿½ï¿½Ï£ï¿½ï¿½Ö·
+		lz77_hash_->Insert(match_head, window_[str_start + 2], str_start, hash_address);
+		t_match_len = 0;
+		t_match_dis = 0;
+		// ï¿½ï¿½ï¿½ï¿½È¡ï¿½ï¿½Æ¥ï¿½ï¿½Í·ï¿½ï¿½Îª0ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¥ï¿½ï¿½ï¿½ï¿½ï¿½Ðµï¿½ï¿½î³¤Æ¥ï¿½ä³¤ï¿½ï¿½
+		if (match_head) {
+			t_match_len = GetMaxMatchLength(match_head, t_match_dis, str_start, look_ahead);
 		}
-		// ÑéÖ¤ÊÇ·ñÕÒµ½µÄÆ¥Åä´®
-		if (tMatchLength >= MIN_MATCHLENGTH) {
-			// ½«<³¤¶È£¬¾àÀë>¶ÔÐ´Èë»º³åÇø
-			lBuff[lBuffCnt++] = tMatchLength - 3;
-			dBuff[dBuffCnt++] = tMatchDistance;
-			// Í³¼Ædistance lengthÆµÂÊÓÃÓÚ¹¹½¨HuffmanÊ÷
-			disHuffman->AddFrequency(tMatchDistance - 1);
-			llHuffman->AddFrequency(tMatchLength - 3, true);
-			// Ð´Èë±ê¼Ç»º³åÇø
-			WriteFlag(fData, fBitCnt, true, oData, oBitCnt);
-			// Ìæ»»ºó½«±»Ìæ»»µÄ´®ÖÐËùÓÐÈý×Ö·û×Ö·û´®²åÈëµ½¹þÏ£±íÖÐ
-			for (int32 i = 0; i < tMatchLength - 1; i++) {
-				strStart++;
-				lzHash->Insert(matchHead, window[strStart + 2], strStart, hashAdress);
+		// ï¿½ï¿½Ö¤ï¿½Ç·ï¿½ï¿½Òµï¿½ï¿½ï¿½Æ¥ï¿½ä´®
+		if (t_match_len >= MIN_MATCHLENGTH) {
+			// ï¿½ï¿½<ï¿½ï¿½ï¿½È£ï¿½ï¿½ï¿½ï¿½ï¿½>ï¿½ï¿½Ð´ï¿½ë»ºï¿½ï¿½ï¿½ï¿½
+			ll_buffer_[ll_buffer_cnt_++] = t_match_len - 3;
+			dis_buffer_[dis_buffer_cnt_++] = t_match_dis;
+			// Í³ï¿½ï¿½distance lengthÆµï¿½ï¿½ï¿½ï¿½ï¿½Ú¹ï¿½ï¿½ï¿½Huffmanï¿½ï¿½
+			dis_hfm_tree_->AddFrequency(t_match_dis - 1);
+			ll_hfm_tree_->AddFrequency(t_match_len - 3, true);
+			// Ð´ï¿½ï¿½ï¿½Ç»ï¿½ï¿½ï¿½ï¿½ï¿½
+			WriteFlag(true);
+			// ï¿½æ»»ï¿½ó½«±ï¿½ï¿½æ»»ï¿½Ä´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ëµ½ï¿½ï¿½Ï£ï¿½ï¿½ï¿½ï¿½
+			for (int32 i = 0; i < t_match_len - 1; i++) {
+				str_start++;
+				lz77_hash_->Insert(match_head, window_[str_start + 2], str_start, hash_address);
 			}
-			strStart++;
-			lookAhead -= tMatchLength;
+			str_start++;
+			look_ahead -= t_match_len;
 		}
 		else {
-			// ËµÃ÷Ã»ÓÐÕÒµ½ÓÐÐ§Æ¥Åä´®£¬½«×Ö·ûÔ­ÑùÊä³öµ½Ñ¹ËõÊý¾ÝÎÄ¼þÖÐ
-			lBuff[lBuffCnt++] = window[strStart];
-			// Í³¼ÆliteralÆµÂÊÓÃÓÚ¹¹½¨HuffmanÊ÷
-			llHuffman->AddFrequency(window[strStart], false);
-			strStart++;
-			lookAhead--;
-			// Ð´Èë±ê¼ÇÎÄ¼þ
-			WriteFlag(fData, fBitCnt, false, oData, oBitCnt);
+			// Ëµï¿½ï¿½Ã»ï¿½ï¿½ï¿½Òµï¿½ï¿½ï¿½Ð§Æ¥ï¿½ä´®ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½Ô­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½
+			ll_buffer_[ll_buffer_cnt_++] = window_[str_start];
+			// Í³ï¿½ï¿½literalÆµï¿½ï¿½ï¿½ï¿½ï¿½Ú¹ï¿½ï¿½ï¿½Huffmanï¿½ï¿½
+			ll_hfm_tree_->AddFrequency(window_[str_start], false);
+			str_start++;
+			look_ahead--;
+			// Ð´ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½
+			WriteFlag(false);
 		}
-		// µ±ÏÈÐÐ»º³åÇøµÄ³¤¶ÈÐ¡ÓÚ×îÐ¡³¤¶ÈÊ±£¬´°¿Ú»¬¶¯
-		if (lookAhead <= MIN_LOOKAHEAD) {
-			MoveWindow(lookAhead, strStart);
+		// ï¿½ï¿½ï¿½ï¿½ï¿½Ð»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä³ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½Ú»ï¿½ï¿½ï¿½
+		if (look_ahead <= MIN_LOOKAHEAD) {
+			MoveWindow(look_ahead, str_start);
 		}
 	}
 
-	// µ±×îºóµÄ±ê¼ÇÎ»Êý²»¹»8bit£¬Ö±½Ó×óÒÆÐ´Èë»º³åÇø
-	if (fBitCnt) {
-		fData <<= (8 - fBitCnt);
-		fBuff[fBuffCnt++] = fData;
-		fData = 0;
-		fBitCnt = 0;
+	// ï¿½ï¿½ï¿½ï¿½ï¿½Ä±ï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½8bitï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð´ï¿½ë»ºï¿½ï¿½ï¿½ï¿½
+	if (flag_bit_cnt_) {
+		flag_data_ <<= (8 - flag_bit_cnt_);
+		flag_buffer_[flag_buffer_cnt_++] = flag_data_;
+		flag_data_ = 0;
+		flag_bit_cnt_ = 0;
 	}
-	// Ð´Èë×îºóÒ»¿é
-	OutHuffman(oData, oBitCnt);
-	if (oBuffCnt) {
-		fwrite(oBuff, sizeof(uint8), oBuffCnt, fO);
+	// Ð´ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½
+	OutHuffman();
+	if (out_buffer_cnt_) {
+		fwrite(out_buffer_, sizeof(uint8), out_buffer_cnt_, fp_out_);
 	}
 
-	fclose(fO);
+	fclose(fp_out_);
 	return;
 }
 
 /*=========================================================
-¹¦ÄÜ£º	»ñµÃ×î³¤µÄÆ¥Åä´®
-·µ»ØÖµ£º	×î³¤µÄÆ¥Åä³¤¶È
-ÃèÊö£º	Í¨¹ýÆ¥ÅäÁ´²»¶Ï²éÕÒµÃµ½×î³¤Æ¥Åä³¤¶ÈµÄÆ¥Åä´®£¬µ«ÊÇÒªÍ¨¹ýÏÞ
-		ÖÆÆ¥Åä´ÎÊýÒÔ·ÀÖ¹ÏÝÈëËÀÑ­»·
+ï¿½ï¿½ï¿½Ü£ï¿½	ï¿½ï¿½ï¿½ï¿½î³¤ï¿½ï¿½Æ¥ï¿½ä´®
+ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½	ï¿½î³¤ï¿½ï¿½Æ¥ï¿½ä³¤ï¿½ï¿½
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½	Í¨ï¿½ï¿½Æ¥ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï²ï¿½ï¿½ÒµÃµï¿½ï¿½î³¤Æ¥ï¿½ä³¤ï¿½Èµï¿½Æ¥ï¿½ä´®ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÒªÍ¨ï¿½ï¿½ï¿½ï¿½
+		ï¿½ï¿½Æ¥ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô·ï¿½Ö¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½
 =========================================================*/
-uint16 Deflate::GetMaxMatchLength(uint16 matchHead, uint16& tMatchDistance, uint16 strStart, uint32 lookAhead) {
-	uint16 nowMatchLength = 0;				// Ã¿´ÎÆ¥ÅäµÄ³¤¶È
-	uint16 tMatchStart = 0;					// µ±Ç°Æ¥ÅäÔÚ²éÕÒ»º³åÇøÖÐµÄÆðÊ¼Î»ÖÃ
-	uint8 maxMatchTimes = MAX_MATCH_TIMES;	// ×î´óµÄÆ¥Åä´ÎÊý
-	uint16 maxMatchLenght = 0;				// ×î³¤µÄÆ¥Åä³¤¶È
+uint16 Deflate::GetMaxMatchLength(uint16 match_head, uint16& t_match_dis, uint16 str_start, uint32 look_ahead) {
+	uint16 t_match_len = 0;				// Ã¿ï¿½ï¿½Æ¥ï¿½ï¿½Ä³ï¿½ï¿½ï¿½
+	uint16 max_match_start = 0;					// ï¿½ï¿½Ç°Æ¥ï¿½ï¿½ï¿½Ú²ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ðµï¿½ï¿½ï¿½Ê¼Î»ï¿½ï¿½
+	uint8 match_times = MAX_MATCH_TIMES;	// ï¿½ï¿½ï¿½ï¿½Æ¥ï¿½ï¿½ï¿½ï¿½ï¿½
+	uint16 max_match_len = 0;				// ï¿½î³¤ï¿½ï¿½Æ¥ï¿½ä³¤ï¿½ï¿½
 
-	while (matchHead > 0 && maxMatchTimes--) {
-		uint8* pStart = window + strStart;	
-		uint8* pEnd = pStart + ((lookAhead <= MAX_MATCHLENGTH) ? (lookAhead - 1) : MAX_MATCHLENGTH);
-		uint8* pMatchStart = window + matchHead;
-		nowMatchLength = 0;
-		// Ì«Ô¶µÄÆ¥Åä·ÅÆú
-		if (strStart - matchHead > WSIZE - MIN_LOOKAHEAD) {
+	while (match_head > 0 && match_times--) {
+		uint8* t_p_start = window_ + str_start;	
+		uint8* t_p_end = t_p_start + ((look_ahead <= MAX_MATCHLENGTH) ? (look_ahead - 1) : MAX_MATCHLENGTH);
+		uint8* t_p_match_start = window_ + match_head;
+		t_match_len = 0;
+		// Ì«Ô¶ï¿½ï¿½Æ¥ï¿½ï¿½ï¿½ï¿½ï¿½
+		if (str_start - match_head > WSIZE - MIN_LOOKAHEAD) {
 			break;
 		}
-		// Öð×Ö·û½øÐÐÆ¥Åä
-		while (pStart < pEnd && *pStart == *pMatchStart) {
-			pStart++;
-			pMatchStart++;
-			nowMatchLength++;
+		// ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½Æ¥ï¿½ï¿½
+		while (t_p_start < t_p_end && *t_p_start == *t_p_match_start) {
+			t_p_start++;
+			t_p_match_start++;
+			t_match_len++;
 		}
-		// Ò»´ÎÆ¥Åä½áÊøÁË£¬ÅÐ¶Ï²¢¼ÇÂ¼×î³¤Æ¥Åä
-		if (nowMatchLength > maxMatchLenght) {
-			maxMatchLenght = nowMatchLength;
-			tMatchStart = matchHead;
+		// Ò»ï¿½ï¿½Æ¥ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë£ï¿½ï¿½Ð¶Ï²ï¿½ï¿½ï¿½Â¼ï¿½î³¤Æ¥ï¿½ï¿½
+		if (t_match_len > max_match_len) {
+			max_match_len = t_match_len;
+			max_match_start = match_head;
 		}
-		// Æ¥ÅäÁ´µÄÏÂÒ»¸öÆ¥ÅäÎ»ÖÃ
-		matchHead = lzHash->prev[matchHead & HASHMASK];
+		// Æ¥ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½Æ¥ï¿½ï¿½Î»ï¿½ï¿½
+		match_head = lz77_hash_->prev_[match_head & HASHMASK];
 	}
 
-	// »ñµÃ×îÖÕ×î³¤Æ¥Åä¶ÔÓ¦µÄ¾àÀë
-	tMatchDistance = strStart - tMatchStart;
-	return maxMatchLenght;
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½î³¤Æ¥ï¿½ï¿½ï¿½Ó¦ï¿½Ä¾ï¿½ï¿½ï¿½
+	t_match_dis = str_start - max_match_start;
+	return max_match_len;
 }
 
 /*=========================================================
-¹¦ÄÜ£º	»¬¶¯´°¿Ú
-·µ»ØÖµ£º	void
-ÃèÊö£º	½«»¬¶¯´°¿ÚÏòºóÒÆ¶¯32K
+ï¿½ï¿½ï¿½Ü£ï¿½	ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½	void
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½	ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¶ï¿½32K
 =========================================================*/
-void Deflate::MoveWindow(size_t& lookAhead, uint16& strStart) {
-	// ÏÈÅÐ¶ÏÊÇ·ñµ½´ïÁËÎÄ¼þÄ©¶Ë
-	if (strStart >= WSIZE) {
-		// ½«ÓÒ´°ÖÐµÄÊý¾ÝÒÆÖÁ×ó´°ÓÒ´°ÖÃ0
-		memcpy(window, window + WSIZE, WSIZE);
-		memset(window + WSIZE, 0, WSIZE);
-		strStart -= WSIZE;
-		// ¸üÐÂ¹þÏ£±í
-		lzHash->Updata();
-		// ÏòÓÒ´°£¨ÏÈÇ°»º³åÇø£©²¹³äÊý¾Ý
-		if (!feof(fI)) {
-			lookAhead += fread(window + WSIZE, 1, WSIZE, fI);
+void Deflate::MoveWindow(size_t& look_ahead, uint16& str_start) {
+	// ï¿½ï¿½ï¿½Ð¶ï¿½ï¿½Ç·ñµ½´ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½Ä©ï¿½ï¿½
+	if (str_start >= WSIZE) {
+		// ï¿½ï¿½ï¿½Ò´ï¿½ï¿½Ðµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò´ï¿½ï¿½ï¿½0
+		memcpy(window_, window_ + WSIZE, WSIZE);
+		memset(window_ + WSIZE, 0, WSIZE);
+		str_start -= WSIZE;
+		// ï¿½ï¿½ï¿½Â¹ï¿½Ï£ï¿½ï¿½
+		lz77_hash_->Updata();
+		// ï¿½ï¿½ï¿½Ò´ï¿½ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		if (!feof(fp_in_)) {
+			look_ahead += fread(window_ + WSIZE, 1, WSIZE, fp_in_);
 		}
 	}
 }
 
 
 /*=========================================================
-¹¦ÄÜ£º	Ð´Èë±ê¼ÇÐÅÏ¢
-·µ»ØÖµ£º	void
-ÃèÊö£º	Í¨¹ýÅÐ¶Ï×Ö·ûÊÇ·ñ±»<³¤¶È£¬¾àÀë>¶ÔÌæ»»£¬À´Ïò»º³åÇøfBuffÐ´Èë±ê
-		¼ÇÐÅÏ¢£¬ÓÃ0±íÊ¾Î´±»Ìæ»»£¬ÓÃ1±íÊ¾ÒÑ±»Ìæ»»
+ï¿½ï¿½ï¿½Ü£ï¿½	Ð´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
+ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½	void
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½	Í¨ï¿½ï¿½ï¿½Ð¶ï¿½ï¿½Ö·ï¿½ï¿½Ç·ï¿½<ï¿½ï¿½ï¿½È£ï¿½ï¿½ï¿½ï¿½ï¿½>ï¿½ï¿½ï¿½æ»»ï¿½ï¿½ï¿½ï¿½ï¿½ò»º³ï¿½ï¿½ï¿½fBuffÐ´ï¿½ï¿½ï¿½
+		ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½0ï¿½ï¿½Ê¾Î´ï¿½ï¿½ï¿½æ»»ï¿½ï¿½ï¿½ï¿½1ï¿½ï¿½Ê¾ï¿½Ñ±ï¿½ï¿½æ»»
 =========================================================*/
-void Deflate::WriteFlag(uint8& fData, uint8& fBitCnt, bool hasEncode, uint8& oData, uint8& oBitCnt) {
-	// ÏÈ×óÒÆÒ»Î»£¬ÈôÎªlength£¬Ôò¼ÇÂ¼1
-	fData <<= 1;
-	if (hasEncode)	fData |= 1;
-	fBitCnt++;
-	// µ±±ê¼ÇÂú8bitÊ±£¬½«fDataÐ´Èë»º³åÇø
-	if (fBitCnt == 8) {
-		fBuff[fBuffCnt++] = fData;
-		fData = 0;
-		fBitCnt = 0;
+void Deflate::WriteFlag(bool is_encoded) {
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»Î»ï¿½ï¿½ï¿½ï¿½Îªlengthï¿½ï¿½ï¿½ï¿½ï¿½Â¼1
+	flag_data_ <<= 1;
+	if (is_encoded)	flag_data_ |= 1;
+	flag_bit_cnt_++;
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½8bitÊ±ï¿½ï¿½ï¿½ï¿½fDataÐ´ï¿½ë»ºï¿½ï¿½ï¿½ï¿½
+	if (flag_bit_cnt_ == 8) {
+		flag_buffer_[flag_buffer_cnt_++] = flag_data_;
+		flag_data_ = 0;
+		flag_bit_cnt_ = 0;
 	}
-	// Èç¹û¸Ã¿éÒÑÂú£¨fBuff´óÐ¡´ïµ½8k£¬¼´lBuff´óÐ¡´ïµ½64k£©
-	if (fBuffCnt == F_BUFFSIZE) {
-		OutHuffman(oData, oBitCnt);
+	// ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½flag_buffer_ï¿½ï¿½Ð¡ï¿½ïµ½8kï¿½ï¿½ï¿½ï¿½ll_buffer_ï¿½ï¿½Ð¡ï¿½ïµ½64kï¿½ï¿½
+	if (flag_buffer_cnt_ == F_BUFFSIZE) {
+		OutHuffman();
 	}
 	return ;
 }
 
 /*=========================================================
-¹¦ÄÜ£º	Êä³öHuffman±àÂëÎÄ¼þµ½»º³åÇø
-·µ»ØÖµ£º	void
-ÃèÊö£º	½«¸Ã¿éµÄÐÅÏ¢Ð´Èë»º³åÇø£¬¸÷¿éµÄHuffman±àÂë¶ÀÁ¢
+ï¿½ï¿½ï¿½Ü£ï¿½	ï¿½ï¿½ï¿½Huffmanï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½	void
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½	ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½ï¿½ï¿½Ï¢Ð´ï¿½ë»ºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Huffmanï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 =========================================================*/
-void Deflate::OutHuffman(uint8& oData, uint8& oBitCnt){
-	// ½«256¼ÓÈëÊ÷ÖÐ
-	llHuffman->codeNode[256]->frequency++;
-	// µÃµ½distanceÊ÷ºÍlenght/literalÊ÷µÄHuffman±àÂë
-	disHuffman->CreatNormalTree();
-	disHuffman->GetCodeLength(disHuffman->root, 0);
-	disHuffman->GetHfmCode();
-	llHuffman->CreatNormalTree();
-	llHuffman->GetCodeLength(llHuffman->root, 0);
-	llHuffman->GetHfmCode();
+void Deflate::OutHuffman(){
+	// ï¿½ï¿½256ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	ll_hfm_tree_->ic_node_[256]->frequency_++;
+	// ï¿½Ãµï¿½distanceï¿½ï¿½ï¿½ï¿½lenght/literalï¿½ï¿½ï¿½ï¿½Huffmanï¿½ï¿½ï¿½ï¿½
+	dis_hfm_tree_->CreatNormalTree();
+	dis_hfm_tree_->GetCodeLength(dis_hfm_tree_->tree_root_, 0);
+	dis_hfm_tree_->GetHfmCode();
+	ll_hfm_tree_->CreatNormalTree();
+	ll_hfm_tree_->GetCodeLength(ll_hfm_tree_->tree_root_, 0);
+	ll_hfm_tree_->GetHfmCode();
 
 	/*double avg = 0, fre = 0;
 	for (int32 i = 0; i < D_CODENUM; i++) {
-		avg +=((double)disHuffman->codeLength[i] + (double)disHuffman->codeExtraBits[i]) * disHuffman->codeNode[i]->frequency;
-		fre += (double)disHuffman->codeNode[i]->frequency;
+		avg +=((double)dis_hfm_tree_->ic_code_len_[i] + (double)dis_hfm_tree_->ic_extra_bits_[i]) * dis_hfm_tree_->ic_node_[i]->frequency_;
+		fre += (double)dis_hfm_tree_->ic_node_[i]->frequency_;
 	}
 	avg /= fre;
-	cout <<  "distance tree: " << avg << endl;*/
+	cout <<  "dis tree: " << avg << endl;*/
 
 	/*avg = 0, fre = 0;
 	for (int32 i = 0; i < LL_CODENUM; i++) {
 		if (i >= 257) {
-			avg += ((double)llHuffman->codeLength[i] + (double)llHuffman->codeExtraBits[i - 257]) * llHuffman->codeNode[i]->frequency;
+			avg += ((double)ll_hfm_tree_->ic_code_len_[i] + (double)ll_hfm_tree_->ic_extra_bits_[i - 257]) * ll_hfm_tree_->ic_node_[i]->frequency_;
 		}
 		else {
-			avg += (double)llHuffman->codeLength[i]  * llHuffman->codeNode[i]->frequency;
+			avg += (double)ll_hfm_tree_->ic_code_len_[i]  * ll_hfm_tree_->ic_node_[i]->frequency_;
 		}
-		fre += (double)llHuffman->codeNode[i]->frequency;
+		fre += (double)ll_hfm_tree_->ic_node_[i]->frequency_;
 	}
 	avg /= fre;
 	cout << "l tree: " << avg << endl;*/
 
-	// Ð´Èë½¨Á¢HuffmanÊ÷ËùÐèÒªµÄÐÅÏ¢
-	fwrite(llHuffman->codeLength, sizeof(uint16), LL_CODENUM, fO);
-	fwrite(disHuffman->codeLength, sizeof(uint16), D_CODENUM, fO);
-	// Ñ­»·flagµÄÃ¿Ò»Î»£¬½«Huffman±àÂëÐ´ÈëÊä³öµ½»º³åÇø
+	// Ð´ï¿½ë½¨ï¿½ï¿½Huffmanï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ï¢
+	fwrite(ll_hfm_tree_->ic_code_len_, sizeof(uint16), LL_CODENUM, fp_out_);
+	fwrite(dis_hfm_tree_->ic_code_len_, sizeof(uint16), D_CODENUM, fp_out_);
+	// Ñ­ï¿½ï¿½flagï¿½ï¿½Ã¿Ò»Î»ï¿½ï¿½ï¿½ï¿½Huffmanï¿½ï¿½ï¿½ï¿½Ð´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	uint32 ll = 0, d = 0, cnt = 0;
-	for (uint32 i = 0; i < fBuffCnt; i++) {
-		uint8 f = fBuff[i];
+	for (uint32 i = 0; i < flag_buffer_cnt_; i++) {
+		uint8 f = flag_buffer_[i];
 		for (uint32 j = 0; j < 8; j++) {
 			if (f & 0x80) {
-				// ½«lengthµÄ±àÂëÐ´Èë
-				uint8 length = lBuff[ll++];
-				uint16 lengthToCode = llHuffman->lToCode[length];
-				BS lCode = llHuffman->hfmCode[257 + lengthToCode];
-				for (auto it = lCode.begin(); it != lCode.end(); it++) {
-					if (*it == '1') OutBit(oData, oBitCnt, 1);
-					else OutBit(oData, oBitCnt, 0);
+				// ï¿½ï¿½lengthï¿½Ä±ï¿½ï¿½ï¿½Ð´ï¿½ï¿½
+				uint8 len = ll_buffer_[ll++];
+				uint16 len_ic = ll_hfm_tree_->len_to_ic_[len];
+				bitstring len_ic_code = ll_hfm_tree_->ic_code_[257 + len_ic];
+				for (auto it = len_ic_code.begin(); it != len_ic_code.end(); it++) {
+					if (*it == '1') OutBit(1);
+					else OutBit(0);
 				}
-				uint32 extra = length - llHuffman->codeBeginLl[lengthToCode];
-				for (int32 k = 0; k < llHuffman->codeExtraBits[lengthToCode]; k++) {
-					if (extra & 1) OutBit(oData, oBitCnt, 1);
-					else OutBit(oData, oBitCnt, 0);
+				uint32 extra = len - ll_hfm_tree_->ic_begin_ll_[len_ic];
+				for (int32 k = 0; k < ll_hfm_tree_->ic_extra_bits_[len_ic]; k++) {
+					if (extra & 1) OutBit(1);
+					else OutBit(0);
 					extra >>= 1;
 				}
-				// ½ô½Ó×ÅÐ´ÈëdistanceµÄ±àÂë
-				uint16 distance = dBuff[d++];
-				uint16 distanceToCode = (distance - 1 < 256) ? disHuffman->disToCode[distance - 1] : disHuffman->disToCode[256 + ((distance - 1) >> 7)];
-				BS dCode = disHuffman->hfmCode[distanceToCode];
-				for (auto it = dCode.begin(); it != dCode.end(); it++) {
-					if (*it == '1') OutBit(oData, oBitCnt, 1);
-					else OutBit(oData, oBitCnt, 0);
+				// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð´ï¿½ï¿½distanceï¿½Ä±ï¿½ï¿½ï¿½
+				uint16 dis = dis_buffer_[d++];
+				uint16 dis_ic = (dis - 1 < 256) ? dis_hfm_tree_->dis_to_ic_[dis - 1] : dis_hfm_tree_->dis_to_ic_[256 + ((dis - 1) >> 7)];
+				bitstring dis_ic_code = dis_hfm_tree_->ic_code_[dis_ic];
+				for (auto it = dis_ic_code.begin(); it != dis_ic_code.end(); it++) {
+					if (*it == '1') OutBit(1);
+					else OutBit(0);
 				}
-				extra = distance - disHuffman->codeBeginDis[distanceToCode];
-				for (int32 k = 0; k < disHuffman->codeExtraBits[distanceToCode]; k++) {
-					if (extra & 1) OutBit(oData, oBitCnt, 1);
-					else OutBit(oData, oBitCnt, 0);
+				extra = dis - dis_hfm_tree_->ic_begin_dis_[dis_ic];
+				for (int32 k = 0; k < dis_hfm_tree_->ic_extra_bits_[dis_ic]; k++) {
+					if (extra & 1) OutBit(1);
+					else OutBit(0);
 					extra >>= 1;
 				}
 			}
 			else {
-				// ½«literal±àÂëÐ´Èë
-				uint8 literal = lBuff[ll ++];
-				BS lCode = llHuffman->hfmCode[literal];
-				for (auto it = lCode.begin(); it != lCode.end(); it++) {
-					if (*it == '1') OutBit(oData, oBitCnt, 1);
-					else OutBit(oData, oBitCnt, 0);
+				// ï¿½ï¿½literalï¿½ï¿½ï¿½ï¿½Ð´ï¿½ï¿½
+				uint8 lit = ll_buffer_[ll ++];
+				bitstring lit_ic_code = ll_hfm_tree_->ic_code_[lit];
+				for (auto it = lit_ic_code.begin(); it != lit_ic_code.end(); it++) {
+					if (*it == '1') OutBit(1);
+					else OutBit(0);
 				}
 			}
-			// ·ÀÖ¹×îºóÒ»¿éµÄfBuffÖÐ×îºóÒ»¸ö×Ö½ÚÎ´Âú8×Ö½Ú¾ÍÌîÈë£¬ËùÒÔÐèÒªÒÔlBuffÎª×¼¼ÆÊý
+			// ï¿½ï¿½Ö¹ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½flag_buffer_ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ö½ï¿½Î´ï¿½ï¿½8ï¿½Ö½Ú¾ï¿½ï¿½ï¿½ï¿½ë£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½lBuffÎª×¼ï¿½ï¿½ï¿½ï¿½
 			cnt++;
-			if (cnt == lBuffCnt) break;
+			if (cnt == ll_buffer_cnt_) break;
 			f <<= 1;
 		}
 	}
-	// Ð´Èë256±íÊ¾¸Ã¿éµÄ½áÊø
-	BS endCode = llHuffman->hfmCode[256];
-	for (auto it = endCode.begin(); it != endCode.end(); it++) {
-		if (*it == '1') OutBit(oData, oBitCnt, 1);
-		else OutBit(oData, oBitCnt, 0);
+	// Ð´ï¿½ï¿½256ï¿½ï¿½Ê¾ï¿½Ã¿ï¿½Ä½ï¿½ï¿½ï¿½
+	bitstring end_ic_code = ll_hfm_tree_->ic_code_[256];
+	for (auto it = end_ic_code.begin(); it != end_ic_code.end(); it++) {
+		if (*it == '1') OutBit(1);
+		else OutBit(0);
 	}
-	// Èç¹û×îºó²»×ã8Î»£¬Ò²Ö±½ÓÐ´Èë
-	if (oBitCnt) {
-		oData <<= (8 - oBitCnt);
-		oBuff[oBuffCnt++] = oData;
-		oData = 0;
-		oBitCnt = 0;
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½8Î»ï¿½ï¿½Ò²Ö±ï¿½ï¿½Ð´ï¿½ï¿½
+	if (out_bit_cnt_) {
+		out_data_ <<= (8 - out_bit_cnt_);
+		out_buffer_[out_buffer_cnt_++] = out_data_;
+		out_data_ = 0;
+		out_bit_cnt_ = 0;
 	}
-	if (oBuffCnt) {
-		fwrite(oBuff, sizeof(uint8), oBuffCnt, fO);
-		oBuffCnt = 0;
+	if (out_buffer_cnt_) {
+		fwrite(out_buffer_, sizeof(uint8), out_buffer_cnt_, fp_out_);
+		out_buffer_cnt_ = 0;
 	}
-	// ÖØÖÃHuffmanÊ÷
-	disHuffman->ResetHfm();
-	llHuffman->ResetHfm();
-	// ÖØÖÃ»º³åÇø
-	fBuffCnt = 0;
-	dBuffCnt = 0;
-	lBuffCnt = 0;
+	// ï¿½ï¿½ï¿½ï¿½Huffmanï¿½ï¿½
+	dis_hfm_tree_->ResetHfm();
+	ll_hfm_tree_->ResetHfm();
+	// ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½
+	flag_buffer_cnt_ = 0;
+	dis_buffer_cnt_ = 0;
+	ll_buffer_cnt_ = 0;
 	return;
 }
 
 /*=========================================================
-¹¦ÄÜ£º	Êä³öÒ»¸öbitµ½»º³åÇø
-·µ»ØÖµ£º	void
-ÃèÊö£º	Êä³öÒ»¸öbitÎ»µ½Êä³ö»º³åÇø£¬µ±Âú8Î»Ê±Êä³öÒ»¸ö×Ö½Ú
+ï¿½ï¿½ï¿½Ü£ï¿½	ï¿½ï¿½ï¿½Ò»ï¿½ï¿½bitï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½	void
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½	ï¿½ï¿½ï¿½Ò»ï¿½ï¿½bitÎ»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½8Î»Ê±ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ö½ï¿½
 =========================================================*/
-void Deflate::OutBit(uint8& oData, uint8& oBitCnt, bool bit){
-	oData <<= 1;
-	if (bit) oData |= 1;
-	oBitCnt++;
-	if (oBitCnt == 8) {
-		oBuff[oBuffCnt++] = oData;
-		if (oBuffCnt == O_BUFFSIZE_D) {
-			fwrite(oBuff, sizeof(uint8), O_BUFFSIZE_D, fO);
-			oBuffCnt = 0;
+void Deflate::OutBit(bool bit){
+	out_data_ <<= 1;
+	if (bit) out_data_ |= 1;
+	out_bit_cnt_++;
+	if (out_bit_cnt_ == 8) {
+		out_buffer_[out_buffer_cnt_++] = out_data_;
+		if (out_buffer_cnt_ == D_O_BUFFSIZE) {
+			fwrite(out_buffer_, sizeof(uint8), D_O_BUFFSIZE, fp_out_);
+			out_buffer_cnt_ = 0;
 		}
-		oData = 0;
-		oBitCnt = 0;
+		out_data_ = 0;
+		out_bit_cnt_ = 0;
 	}
 	return;
 }

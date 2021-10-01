@@ -9,10 +9,10 @@ public:
 	~TreeNode();
 
 private:
-	int32 code;
-	uint64 frequency;
-	TreeNode* left;
-	TreeNode* right;
+	int32 code_;
+	uint64 frequency_;
+	TreeNode* left_;
+	TreeNode* right_;
 	friend class DisHuffman;
 	friend class LlHuffman;
 	friend class Deflate;

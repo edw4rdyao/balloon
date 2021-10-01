@@ -2,8 +2,8 @@
 #include <bitset>
 
 DisHuffman::DisHuffman(){
-	// ³õÊ¼»¯Çø¼äÂëÓëdistanceµÄ¹ØÏµ
-	disToCode = new uint8[512]{
+	// ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½distanceï¿½Ä¹ï¿½Ïµ
+	dis_to_ic_ = new uint8[512]{
 		 0,  1,  2,  3,  4,  4,  5,  5,  6,  6,  6,  6,  7,  7,  7,  7,  8,  8,  8,  8,
 		 8,  8,  8,  8,  9,  9,  9,  9,  9,  9,  9,  9, 10, 10, 10, 10, 10, 10, 10, 10,
 		10, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
@@ -31,110 +31,110 @@ DisHuffman::DisHuffman(){
 		29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29,
 		29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29
 	};
-	// ³õÊ¼»¯extrabits(ÍØÕ¹Î»)
-	codeExtraBits = new uint16[D_CODENUM]{ 0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13 };
-	// ³õÊ¼»¯codeBeginDis,Ã¿¸öÇø¼äÂë¿ªÊ¼µÄdistanceÖµ
-	codeBeginDis = new uint16[D_CODENUM]{ 1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577 };
-	// ³õÊ¼»¯codeNode
-	codeNode = new Node[D_CODENUM];
+	// ï¿½ï¿½Ê¼ï¿½ï¿½extrabits(ï¿½ï¿½Õ¹Î»)
+	ic_extra_bits_ = new uint16[D_CODENUM]{ 0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13 };
+	// ï¿½ï¿½Ê¼ï¿½ï¿½ic_begin_dis_,Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ë¿ªÊ¼ï¿½ï¿½distanceÖµ
+	ic_begin_dis_ = new uint16[D_CODENUM]{ 1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577 };
+	// ï¿½ï¿½Ê¼ï¿½ï¿½ic_node_
+	ic_node_ = new Node[D_CODENUM];
 	for (int32 i = 0; i < D_CODENUM; i++) {
-		codeNode[i] = new TreeNode;
-		codeNode[i]->code = i;
+		ic_node_[i] = new TreeNode;
+		ic_node_[i]->code_ = i;
 	}
-	// ³õÊ¼»¯codeLength
-	codeLength = new uint16[D_CODENUM];
-	for (int32 i = 0; i < D_CODENUM; i++) codeLength[i] = 0;
-	// ³õÊ¼»¯codeLengthCnt
-	codeLengthCnt = new uint16[D_MAX_CODELENGTH];
-	for (int32 i = 0; i < D_MAX_CODELENGTH; i++) codeLengthCnt[i] = 0;
-	// ³õÊ¼»¯hfmCodeInt
-	hfmCodeInt = new uint32[D_CODENUM];
-	for (int32 i = 0; i < D_CODENUM; i++) hfmCodeInt[i] = 0;
-	// ³õÊ¼»¯hfmCode
-	hfmCode = new BS[D_CODENUM];
-	// ³õÊ¼»¯nextHfmCodeInt
-	nextHfmCodeInt = new uint32[D_MAX_CODELENGTH];
-	for (int32 i = 0; i < D_MAX_CODELENGTH; i++) nextHfmCodeInt[i] = 0;
-	// ³õÊ¼»¯Ê÷¸ù½Úµã
-	root = NULL;
+	// ï¿½ï¿½Ê¼ï¿½ï¿½ic_code_len_
+	ic_code_len_ = new uint16[D_CODENUM];
+	for (int32 i = 0; i < D_CODENUM; i++) ic_code_len_[i] = 0;
+	// ï¿½ï¿½Ê¼ï¿½ï¿½ic_code_len_cnt_
+	ic_code_len_cnt_ = new uint16[D_MAX_CODELENGTH];
+	for (int32 i = 0; i < D_MAX_CODELENGTH; i++) ic_code_len_cnt_[i] = 0;
+	// ï¿½ï¿½Ê¼ï¿½ï¿½ic_code_int_
+	ic_code_int_ = new uint32[D_CODENUM];
+	for (int32 i = 0; i < D_CODENUM; i++) ic_code_int_[i] = 0;
+	// ï¿½ï¿½Ê¼ï¿½ï¿½ic_code_
+	ic_code_ = new bitstring[D_CODENUM];
+	// ï¿½ï¿½Ê¼ï¿½ï¿½next_len_code_int_
+	next_len_code_int_ = new uint32[D_MAX_CODELENGTH];
+	for (int32 i = 0; i < D_MAX_CODELENGTH; i++) next_len_code_int_[i] = 0;
+	// ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Úµï¿½
+	tree_root_ = NULL;
 }
 
 DisHuffman::~DisHuffman(){
-	delete[] disToCode;
-	delete[] codeBeginDis;
-	delete[] codeExtraBits;
-	delete[] codeLength;
-	for (int32 i = 0; i < D_CODENUM; i++) delete codeNode[i];
-	delete[] codeNode;
-	delete[] codeLengthCnt;
-	delete[] hfmCode;
-	delete[] nextHfmCodeInt;
-	delete[] hfmCodeInt;
+	delete[] dis_to_ic_;
+	delete[] ic_begin_dis_;
+	delete[] ic_extra_bits_;
+	delete[] ic_code_len_;
+	for (int32 i = 0; i < D_CODENUM; i++) delete ic_node_[i];
+	delete[] ic_node_;
+	delete[] ic_code_len_cnt_;
+	delete[] ic_code_;
+	delete[] next_len_code_int_;
+	delete[] ic_code_int_;
 }
 
 void DisHuffman::AddFrequency(uint16 d){
-	// ¸ù¾ÝdistanceÎªÆä¶ÔÓ¦µÄÇø¼äÂëÌí¼ÓÆµÂÊ
-	codeNode[(d < 256) ? disToCode[d] : disToCode[256 + (d >> 7)]]->frequency++;
+	// ï¿½ï¿½ï¿½ï¿½distanceÎªï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æµï¿½ï¿½
+	ic_node_[(d < 256) ? dis_to_ic_[d] : dis_to_ic_[256 + (d >> 7)]]->frequency_++;
 	return;
 }
 
 void DisHuffman::CreatNormalTree(){
-	// ½«Çø¼äÂë¶ÔÓ¦µÄ½Úµã¼ÓÈëµ½ÓÅÏÈ¶ÓÁÐ
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½Ä½Úµï¿½ï¿½ï¿½ëµ½ï¿½ï¿½ï¿½È¶ï¿½ï¿½ï¿½
 	for (int32 i = 0; i < D_CODENUM; i++) {
-		if(codeNode[i]->frequency > 0)
-			nodeHeap.push(codeNode[i]);
+		if(ic_node_[i]->frequency_ > 0)
+			node_heap_.push(ic_node_[i]);
 	}
 
-	// ½¨Á¢Ô­Ê¼µÄhuffmanÊ÷
-	while (!nodeHeap.empty()) {
-		Node p = nodeHeap.top();
-		nodeHeap.pop();
-		if (nodeHeap.empty()) {
-			root = p;
+	// ï¿½ï¿½ï¿½ï¿½Ô­Ê¼ï¿½ï¿½huffmanï¿½ï¿½
+	while (!node_heap_.empty()) {
+		Node p = node_heap_.top();
+		node_heap_.pop();
+		if (node_heap_.empty()) {
+			tree_root_ = p;
 			break;
 		}
-		Node q = nodeHeap.top();
-		nodeHeap.pop();
-		Node newNode = new TreeNode;
-		newNode->frequency = p->frequency + q->frequency;
-		if (p->frequency <= q->frequency) {
-			newNode->left = p;
-			newNode->right = q;
+		Node q = node_heap_.top();
+		node_heap_.pop();
+		Node new_node = new TreeNode;
+		new_node->frequency_ = p->frequency_ + q->frequency_;
+		if (p->frequency_ <= q->frequency_) {
+			new_node->left_ = p;
+			new_node->right_ = q;
 		}
 		else {
-			newNode->left = q;
-			newNode->right = p;
+			new_node->left_ = q;
+			new_node->right_ = p;
 		}
-		nodeHeap.push(newNode);
+		node_heap_.push(new_node);
 	}
 
 	return;
 }
 
 void DisHuffman::CreatDisHfmTree(){
-	// »ñÈ¡¸÷¸ö³¤¶ÈµÄ±àÂëÊýÁ¿
+	// ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÈµÄ±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	for (int32 i = 0; i < D_CODENUM; i++) {
-		codeLengthCnt[codeLength[i]]++;
+		ic_code_len_cnt_[ic_code_len_[i]]++;
 	}
-	// »ñÈ¡¸÷¸öÇø¼äÂëµÄHuffman±àÂë
+	// ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Huffmanï¿½ï¿½ï¿½ï¿½
 	GetHfmCode();
-	// ÐÂ½¨¸ù½Úµã
-	root = new TreeNode;
-	// ½¨Á¢HuffmanÊ÷
+	// ï¿½Â½ï¿½ï¿½ï¿½ï¿½Úµï¿½
+	tree_root_ = new TreeNode;
+	// ï¿½ï¿½ï¿½ï¿½Huffmanï¿½ï¿½
 	for (uint32 i = 0; i < D_CODENUM; i++) {
-		if (codeLength[i]) {
-			Node p = root;
-			BS code = hfmCode[i];
+		if (ic_code_len_[i]) {
+			Node p = tree_root_;
+			bitstring code = ic_code_[i];
 			for (auto it = code.begin(); it != code.end(); it++) {
 				if (*it == '0') {
-					if (it + 1 == code.end()) p->left = codeNode[i];
-					else if (!p->left)	p->left = new TreeNode;
-					p = p->left;
+					if (it + 1 == code.end()) p->left_ = ic_node_[i];
+					else if (!p->left_)	p->left_ = new TreeNode;
+					p = p->left_;
 				}
 				else {
-					if (it + 1 == code.end()) p->right = codeNode[i];
-					else if (!p->right)	p->right = new TreeNode;
-					p = p->right;
+					if (it + 1 == code.end()) p->right_ = ic_node_[i];
+					else if (!p->right_)	p->right_ = new TreeNode;
+					p = p->right_;
 				}
 			}
 		}
@@ -144,76 +144,76 @@ void DisHuffman::CreatDisHfmTree(){
 
 void DisHuffman::GetCodeLength(Node p, uint16 l){
 	if (p) {
-		if (p->code >= 0) {
-			codeLength[p->code] = l;
-			codeLengthCnt[l] ++;
+		if (p->code_ >= 0) {
+			ic_code_len_[p->code_] = l;
+			ic_code_len_cnt_[l] ++;
 		}
-		GetCodeLength(p->left, l + 1);
-		GetCodeLength(p->right, l + 1);
+		GetCodeLength(p->left_, l + 1);
+		GetCodeLength(p->right_, l + 1);
 	}
 	return ;
 }
 
 void DisHuffman::GetHfmCode(){
-	// ¼ÆËãÃ¿¸ö³¤¶ÈµÄÇø¼äÂëÂë×Ö×î×ó±ßµÄ±àÂë
+	// ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½Èµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ßµÄ±ï¿½ï¿½ï¿½
 	int32 code = 0;
 	for (int32 i = 1; i < D_MAX_CODELENGTH; i++) {
-		code = (code + codeLengthCnt[i - 1]) << 1;
-		nextHfmCodeInt[i] = code;
+		code = (code + ic_code_len_cnt_[i - 1]) << 1;
+		next_len_code_int_[i] = code;
 	}
-	// µÃµ½Ã¿¸öÇø¼äÂëµÄÂë×Ö
+	// ï¿½Ãµï¿½Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	for (int32 i = 0; i < D_CODENUM;  i++) {
-		if (codeLength[i] > 0) {
-			hfmCodeInt[i] = nextHfmCodeInt[codeLength[i]];
-			nextHfmCodeInt[codeLength[i]] ++;
+		if (ic_code_len_[i] > 0) {
+			ic_code_int_[i] = next_len_code_int_[ic_code_len_[i]];
+			next_len_code_int_[ic_code_len_[i]] ++;
 		}
 	}
-	// µÃµ½Ã¿¸öÇø¼äÂëµÄ×Ö·û´®ÐÍÂë×Ö
+	// ï¿½Ãµï¿½Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	for (int32 i = 0; i < D_CODENUM; i ++) {
-		hfmCode[i]=IntToBS(hfmCodeInt[i], codeLength[i], false);
+		ic_code_[i]=IntToBitstring(ic_code_int_[i], ic_code_len_[i], false);
 	}
 
 	// debug
 	/*cout << "Code Frequency: " << endl;
 	for (int32 i = 0; i < D_CODENUM; i++) {
-		cout << i << "-" << codeNode[i]->frequency << endl;
+		cout << i << "-" << ic_node_[i]->frequency_ << endl;
 	}
 	cout << "Code HfmCodeInt: " << endl;
 	for (int32 i = 0; i < D_CODENUM; i++) {
-		cout << i << "-" << codeLength[i] << "-" << bitset<sizeof(uint32) * 8>(hfmCodeInt[i]) << endl;
+		cout << i << "-" << ic_code_len_[i] << "-" << bitset<sizeof(uint32) * 8>(ic_code_int_[i]) << endl;
 	}*/
-	/*cout << "Code HfmCodeBS: " << endl;
+	/*cout << "Code HfmCodeBitstring: " << endl;
 	for (int32 i = 0; i < D_CODENUM; i++) {
-		cout << i << "-" << codeLength[i] << "-" << hfmCode[i] << endl;
+		cout << i << "-" << ic_code_len_[i] << "-" << ic_code_[i] << endl;
 	}*/
 	return;
 }
 
 void DisHuffman::ResetHfm(){
-	// Çå¿ÕÇø¼äÂëÊý¾Ý
-	memset(codeLength, 0, sizeof(uint16) * D_CODENUM);
-	memset(codeLengthCnt, 0, sizeof(uint16) * D_MAX_CODELENGTH);
-	// Çå¿ÕHuffman±àÂëÊý¾Ý
-	for (int32 i = 0; i < D_CODENUM; i++) hfmCode[i] = "";
-	memset(hfmCodeInt, 0, sizeof(uint32) * D_CODENUM);
-	memset(nextHfmCodeInt, 0, sizeof(uint32) * D_MAX_CODELENGTH);
-	while (!nodeHeap.empty()) nodeHeap.pop();
-	// Çå¿ÕHuffmanÊ÷
-	DestroyTree(root);
-	root = NULL;
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	memset(ic_code_len_, 0, sizeof(uint16) * D_CODENUM);
+	memset(ic_code_len_cnt_, 0, sizeof(uint16) * D_MAX_CODELENGTH);
+	// ï¿½ï¿½ï¿½Huffmanï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	for (int32 i = 0; i < D_CODENUM; i++) ic_code_[i] = "";
+	memset(ic_code_int_, 0, sizeof(uint32) * D_CODENUM);
+	memset(next_len_code_int_, 0, sizeof(uint32) * D_MAX_CODELENGTH);
+	while (!node_heap_.empty()) node_heap_.pop();
+	// ï¿½ï¿½ï¿½Huffmanï¿½ï¿½
+	DestroyTreeNode(tree_root_);
+	tree_root_ = NULL;
 	for (int32 i = 0; i < D_CODENUM; i++) {
-		codeNode[i]->frequency = 0;
-		codeNode[i]->code = i;
-		codeNode[i]->left = codeNode[i]->right = NULL;
+		ic_node_[i]->frequency_ = 0;
+		ic_node_[i]->code_ = i;
+		ic_node_[i]->left_ = ic_node_[i]->right_ = NULL;
 	}
 	return;
 }
 
-void DisHuffman::DestroyTree(Node p){
+void DisHuffman::DestroyTreeNode(Node p){
 	if (p) {
-		DestroyTree(p->left);
-		DestroyTree(p->right);
-		if(p->code < 0) delete p;
+		DestroyTreeNode(p->left_);
+		DestroyTreeNode(p->right_);
+		if(p->code_ < 0) delete p;
 	}
 	return;
 }

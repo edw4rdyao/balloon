@@ -1,9 +1,9 @@
 #include"treenode.h"
 TreeNode::TreeNode() {
-	code = -1;
-	frequency = 0;
-	left = NULL;
-	right = NULL;
+	code_ = -1;
+	frequency_ = 0;
+	left_ = NULL;
+	right_ = NULL;
 }
 
 TreeNode::~TreeNode() {

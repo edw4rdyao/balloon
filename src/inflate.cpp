@@ -1,139 +1,139 @@
 #include "inflate.h"
 
 Inflate::Inflate()
-	:disHuffman(new DisHuffman), llHuffman(new LlHuffman){
-	iData = 0;	iBitCnt = 0;
-	oBuff = new uint8[O_BUFFSIZE_I];	oBuffCnt = 0;
-	fO = NULL;
-	fI = NULL;
+	:dis_hfm_tree_(new DisHuffman), 		ll_hfm_tree_(new LlHuffman),
+	in_data_(0),							in_bit_cnt_ (0),
+	out_buffer_(new uint8[I_O_BUFFSIZE]),	out_buffer_cnt_ (0),
+	fp_out_ (NULL),							fp_in_ (NULL){
 }
 
 Inflate::~Inflate(){
-	delete disHuffman;
-	delete llHuffman;
-	delete[] oBuff;
+	delete dis_hfm_tree_;
+	delete ll_hfm_tree_;
+	delete[] out_buffer_;
 }
 
-void Inflate::Uncompress(string fileName, string newFileName){
-	// ´ò¿ªÊäÈëÊä³öÎÄ¼þ
-	fI = fopen(fileName.c_str(), "rb");
-	assert(fI);
-	fO = fopen(newFileName.c_str(), "wb");
-	assert(fO);
+void Inflate::Uncompress(std::string file_name, std::string new_file_name){
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½
+	fp_in_ = fopen(file_name.c_str(), "rb");
+	assert(fp_in_);
+	fp_out_ = fopen(new_file_name.c_str(), "wb");
+	assert(fp_out_);
 
-	uint64 fileSize = 0;	// Ô­ÎÄ¼þ´óÐ¡
-	uint64 inflateCnt = 0;	// ÒÑ½âÑ¹ÎÄ¼þ´óÐ¡
+	uint64 file_size = 0;	// Ô­ï¿½Ä¼ï¿½ï¿½ï¿½Ð¡
+	uint64 inflate_cnt = 0;	// ï¿½Ñ½ï¿½Ñ¹ï¿½Ä¼ï¿½ï¿½ï¿½Ð¡
 
-	// »ñÈ¡Ô­ÎÄ¼þ´óÐ¡
-	fread(&fileSize, sizeof(uint64), 1, fI);
+	// ï¿½ï¿½È¡Ô­ï¿½Ä¼ï¿½ï¿½ï¿½Ð¡
+	fread(&file_size, sizeof(uint64), 1, fp_in_);
 
-	while (inflateCnt < fileSize) {
-		// ¿éµÄ¿ªÊ¼£¬»ñÈ¡ÖØ¹¹HuffmanÊ÷ËùÐèÒªµÄÐÅÏ¢
-		fread(llHuffman->codeLength, sizeof(uint16), LL_CODENUM, fI);
-		fread(disHuffman->codeLength, sizeof(uint16), D_CODENUM, fI);
-		fread(&iData, sizeof(uint8), 1, fI);
-		iBitCnt = 0;
-		// ÖØ¹¹HuffmanÊ÷
-		disHuffman->CreatDisHfmTree();
-		llHuffman->CreatLlHfmTree();
+	while (inflate_cnt < file_size) {
+		// ï¿½ï¿½Ä¿ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½È¡ï¿½Ø¹ï¿½Huffmanï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ï¢
+		fread(ll_hfm_tree_->ic_code_len_, sizeof(uint16), LL_CODENUM, fp_in_);
+		fread(dis_hfm_tree_->ic_code_len_, sizeof(uint16), D_CODENUM, fp_in_);
+		fread(&in_data_, sizeof(uint8), 1, fp_in_);
+		in_bit_cnt_ = 0;
+		// ï¿½Ø¹ï¿½Huffmanï¿½ï¿½
+		dis_hfm_tree_->CreatDisHfmTree();
+		ll_hfm_tree_->CreatLlHfmTree();
 		while (true) {
-			// ½âÂë³ölength/literalÇø¼äÂë
-			uint16 encodeLl = EncodeALl();	
-			if (encodeLl >= 0 && encodeLl <= 255) {
+			// ï¿½ï¿½ï¿½ï¿½ï¿½length/literalï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+			uint16 encode_ll = EncodeALl();	
+			if (encode_ll >= 0 && encode_ll <= 255) {
 				// Îªliteral
-				uint8 literal = encodeLl;
-				oBuff[oBuffCnt++] = literal;
-				if (oBuffCnt == O_BUFFSIZE_I) {
-					fwrite(oBuff, sizeof(uint8), O_BUFFSIZE_I / 2, fO);
-					memcpy(oBuff, oBuff + O_BUFFSIZE_I / 2, O_BUFFSIZE_I / 2 * sizeof(uint8));
-					oBuffCnt -= O_BUFFSIZE_I / 2;
+				uint8 literal = encode_ll;
+				out_buffer_[out_buffer_cnt_++] = literal;
+				if (out_buffer_cnt_ == I_O_BUFFSIZE) {
+					fwrite(out_buffer_, sizeof(uint8), I_O_BUFFSIZE / 2, fp_out_);
+					memcpy(out_buffer_, out_buffer_ + I_O_BUFFSIZE / 2, I_O_BUFFSIZE / 2 * sizeof(uint8));
+					out_buffer_cnt_ -= I_O_BUFFSIZE / 2;
 				}
-				// ¸üÐÂÒÑ½âÂë´óÐ¡
-				inflateCnt++;
+				// ï¿½ï¿½ï¿½ï¿½ï¿½Ñ½ï¿½ï¿½ï¿½ï¿½Ð¡
+				inflate_cnt++;
 			}
-			else if (encodeLl >= 257 && encodeLl <= 285) {
-				// Îªlength£¬ÔòÐèÒªÌí¼Óextra
-				uint16 length = llHuffman->codeBeginLl[encodeLl - 257], extra = 0;
-				for (int32 i = 0; i < llHuffman->codeExtraBits[encodeLl - 257]; i++) {
+			else if (encode_ll >= 257 && encode_ll <= 285) {
+				// Îªlengthï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½extra
+				uint16 len = ll_hfm_tree_->ic_begin_ll_[encode_ll - 257], extra = 0;
+				for (int32 i = 0; i < ll_hfm_tree_->ic_extra_bits_[encode_ll - 257]; i++) {
 					if (InBit()) extra |= (1 << i);
 				}
-				length += extra;
-				length += 3;
-				// ½âÂë³ödistance
-				uint16 distance = EncodeADis();
-				// ¸üÐÂÒÑ½âÂë´óÐ¡
-				inflateCnt += length;
-				// ÅÐ¶ÏÊÇ·ñ¿ÉÒÔÐ´Èë»º³åÇø
-				if (oBuffCnt + length >= O_BUFFSIZE_I) {
-					fwrite(oBuff, sizeof(uint8), O_BUFFSIZE_I / 2, fO);
-					memcpy(oBuff, oBuff + O_BUFFSIZE_I / 2, O_BUFFSIZE_I / 2 * sizeof(uint8));
-					oBuffCnt -= O_BUFFSIZE_I / 2;
+				len += extra;
+				len += 3;
+				// ï¿½ï¿½ï¿½ï¿½ï¿½distance
+				uint16 dis = EncodeADis();
+				// ï¿½ï¿½ï¿½ï¿½ï¿½Ñ½ï¿½ï¿½ï¿½ï¿½Ð¡
+				inflate_cnt += len;
+				// ï¿½Ð¶ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½Ð´ï¿½ë»ºï¿½ï¿½ï¿½ï¿½
+				if (out_buffer_cnt_ + len >= I_O_BUFFSIZE) {
+					fwrite(out_buffer_, sizeof(uint8), I_O_BUFFSIZE / 2, fp_out_);
+					memcpy(out_buffer_, out_buffer_ + I_O_BUFFSIZE / 2, I_O_BUFFSIZE / 2 * sizeof(uint8));
+					out_buffer_cnt_ -= I_O_BUFFSIZE / 2;
 				}
-				uint32 oBuffCntPre = oBuffCnt;
-				if (distance < length) {
-					uint32 restLength = length;
-					while (restLength >= distance) {
-						memcpy(oBuff + oBuffCnt, oBuff + oBuffCnt - distance, distance * sizeof(uint8));
-						oBuffCnt += distance;
-						restLength -= distance;
+				uint32 out_buffer_cnt_pre = out_buffer_cnt_;
+				if (dis < len) {
+					uint32 rest_len = len;
+					while (rest_len >= dis) {
+						memcpy(out_buffer_ + out_buffer_cnt_, out_buffer_ + out_buffer_cnt_ - dis, dis * sizeof(uint8));
+						out_buffer_cnt_ += dis;
+						rest_len -= dis;
 					}
-					memcpy(oBuff + oBuffCnt, oBuff + oBuffCntPre - distance, restLength * sizeof(uint8));
-					oBuffCnt += restLength;
+					memcpy(out_buffer_ + out_buffer_cnt_, out_buffer_ + out_buffer_cnt_pre - dis, rest_len * sizeof(uint8));
+					out_buffer_cnt_ += rest_len;
 				}
 				else {
-					memcpy(oBuff + oBuffCnt, oBuff + oBuffCnt - distance, length * sizeof(uint8));
-					oBuffCnt += length;
+					memcpy(out_buffer_ + out_buffer_cnt_, out_buffer_ + out_buffer_cnt_ - dis, len * sizeof(uint8));
+					out_buffer_cnt_ += len;
 				}
 			}
-			else if (encodeLl == 256) {
-				// ¿éµÄ½áÊø
+			else if (encode_ll == 256) {
+				// ï¿½ï¿½Ä½ï¿½ï¿½ï¿½
 				break;
 			}
 		}
-		// ÐÂµÄÒ»¸ö¿éµÄ¿ªÊ¼£¬ÖØÖÃHuffmanÊ÷
-		disHuffman->ResetHfm();
-		llHuffman->ResetHfm();
+		// ï¿½Âµï¿½Ò»ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Huffmanï¿½ï¿½
+		dis_hfm_tree_->ResetHfm();
+		ll_hfm_tree_->ResetHfm();
 	}
-	if (oBuffCnt) {
-		fwrite(oBuff, sizeof(uint8), oBuffCnt, fO);
+	if (out_buffer_cnt_) {
+		fwrite(out_buffer_, sizeof(uint8), out_buffer_cnt_, fp_out_);
 	}
-	fclose(fO);
+	fclose(fp_in_);
+	fclose(fp_out_);
 	return;
 }
 
 uint16 Inflate::EncodeALl(){
-	Node p = llHuffman->root;
-	while (p->code < 0) {
-		if (InBit()) p = p->right;
-		else p = p->left;
+	Node p = ll_hfm_tree_->tree_root_;
+	while (p->code_ < 0) {
+		if (InBit()) p = p->right_;
+		else p = p->left_;
 	}
-	return uint16(p->code);
+	return uint16(p->code_);
 }
 
 uint16 Inflate::EncodeADis(){
-	Node p = disHuffman->root;
-	while (p->code < 0) {
-		if (InBit()) p = p->right;
-		else p = p->left;
+	Node p = dis_hfm_tree_->tree_root_;
+	while (p->code_ < 0) {
+		if (InBit()) p = p->right_;
+		else p = p->left_;
 	}
-	uint16 encode = p->code;
-	uint16 distance = disHuffman->codeBeginDis[encode], extra = 0;
-	for (int32 i = 0; i < disHuffman->codeExtraBits[encode]; i++) {
+	uint16 encode_ic = p->code_;
+	uint16 dis = dis_hfm_tree_->ic_begin_dis_[encode_ic], extra = 0;
+	for (int32 i = 0; i < dis_hfm_tree_->ic_extra_bits_[encode_ic]; i++) {
 		if(InBit()) extra |= (1 << i);
 	}
-	distance += extra;
-	return distance;
+	dis += extra;
+	return dis;
 }
 
 uint8 Inflate::InBit(){
 	uint8 bit = 0;
-	if (iBitCnt == 8) {
-		fread(&iData, sizeof(uint8), 1, fI);
-		iBitCnt = 0;
+	if (in_bit_cnt_ == 8) {
+		fread(&in_data_, sizeof(uint8), 1, fp_in_);
+		in_bit_cnt_ = 0;
 	}
-	if (iData & 0x80) bit = 1;
-	iData <<= 1;
-	iBitCnt++;
+	if (in_data_ & 0x80) bit = 1;
+	in_data_ <<= 1;
+	in_bit_cnt_++;
 	return bit;
 }
 

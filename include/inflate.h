@@ -11,20 +11,19 @@ class Inflate {
 public:
 	Inflate();
 	~Inflate();
-	void Uncompress(string fileName, string newFileName);
+	void Uncompress(std::string file_name, std::string new_file_name);
 	uint16 EncodeALl();
 	uint16 EncodeADis();
-	uint8 InBit();
+	inline uint8 InBit();
 private:
-	DisHuffman* disHuffman;		// DistanceÖØ¹¹HuffmanÊ÷
-	LlHuffman* llHuffman;		// literal/lengthÖØ¹¹HuffmanÊ÷
-	FILE* fI;					// ÊäÈëÊä³öÎÄ¼ş
-	FILE* fO;		
-	uint8* oBuff;				// »º³åÇø
-	uint32 oBuffCnt;
-	uint8 iData = 0;			// 8bitsÊäÈëĞÅÏ¢
-	uint8 iBitCnt = 0;			// ÊäÈëĞÅÏ¢ÒÑ¾­´¦ÀíµÄbitÎ»Êı
+	DisHuffman* dis_hfm_tree_;		// Distanceï¿½Ø¹ï¿½Huffmanï¿½ï¿½
+	LlHuffman* ll_hfm_tree_;		// literal/lenï¿½Ø¹ï¿½Huffmanï¿½ï¿½
+	FILE* fp_in_;					// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½
+	FILE* fp_out_;		
+	uint8* out_buffer_;				// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	uint32 out_buffer_cnt_;
+	uint8 in_data_ = 0;			// 8bitsï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
+	uint8 in_bit_cnt_ = 0;			// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½Ñ¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½bitÎ»ï¿½ï¿½
 };
-
 
 #endif // !INFLATE_H

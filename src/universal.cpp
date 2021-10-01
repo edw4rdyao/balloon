@@ -1,7 +1,7 @@
 #include "universal.h"
 
-BS IntToBS(uint32 i, uint16 l, bool b){
-	string r;
+bitstring IntToBitstring(uint32 i, uint16 l, bool b){
+	bitstring r;
 	if (b) {
 		do {
 			r = ((i & 1) ? "1" : "0") + r;
@@ -17,27 +17,22 @@ BS IntToBS(uint32 i, uint16 l, bool b){
 	return r;
 }
 
-void BSShiftLeft(BS& b, uint16 l){
+void BitstringShiftLeft(bitstring& b, uint16 l){
 	while (l--) {
 		b += "0";
 	}
 	return ;
 }
 
-BS BSAdd(const BS& a, const BS& b){
+bitstring BitstringAdd(const bitstring& a, const bitstring& b){
 	int32 la = a.length(), lb = b.length(), c = 0, s = 0;
-	BS r;
+	bitstring r;
 	while (la > 0 || lb > 0) {
 		s = c;
 		s += ((la > 0) ? (a[la - 1] - '0') : 0);
 		s += ((lb > 0) ? (b[lb - 1] - '0') : 0);
 		c = s / 2;
-		if (s % 2) {
-			r = "1" + r;
-		}
-		else {
-			r = "0" + r;
-		}
+		r = (s % 2) ? ("1" + r) : ("0" + r);
 		la--;
 		lb--;
 	}

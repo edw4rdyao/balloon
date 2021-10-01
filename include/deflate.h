@@ -1,38 +1,42 @@
 #ifndef DEFLATE_H
 #define DEFLATE_H
 #define _CRT_SECURE_NO_WARNINGS
-#include "hash.h"
-#include "dishuffman.h"
-#include "llhuffman.h"
 #include <fstream>
 #include <cstdio>
 #include <assert.h>
+#include "hash.h"
+#include "dishuffman.h"
+#include "llhuffman.h"
 
 class Deflate {
 public:
 	Deflate();
 	~Deflate();
-	void Compress(string fileName, string newFileName);
-	void MoveWindow(size_t& lookAhead, uint16& strStart);
-	uint16 GetMaxMatchLength(uint16 matchHead, uint16& tMatchDistance, uint16 strStart, uint32 lookAhead);
-	void WriteFlag(uint8& fData, uint8& fBitCnt, bool hasEncode, uint8& oData, uint8& oBitCnt);
-	void OutHuffman(uint8& oData, uint8& oBitCnt);
-	inline void OutBit(uint8& oData, uint8& oBitCnt, bool bit);
+	void Compress(std::string file_name, std::string new_file_name);
+	void MoveWindow(size_t& look_ahead, uint16& str_start);
+	uint16 GetMaxMatchLength(uint16 match_head, uint16& t_match_dis, uint16 str_start, uint32 look_ahead);
+	void WriteFlag(bool is_encoded);
+	void OutHuffman();
+	inline void OutBit(bool bit);
 private:
-	uint8* window;				// »¬¶¯´°¿Ú£¬´óÐ¡Îª64K£¬ÓÃÓÚ´æ·Å»º³åÇøµÄÊý¾Ý
-	HashTable* lzHash;			// ´°¿Ú¶ÔÓ¦µÄ¹þÏ£±í£¬Ëæ×Å´°¿ÚµÄ»¬¶¯²»¶Ï¸üÐÂ
-	DisHuffman* disHuffman;		// Distance¹¹½¨HuffmanÊ÷
-	LlHuffman* llHuffman;		// literal/length¹¹½¨HuffmanÊ÷
-	FILE* fI;					// ÊäÈëÊä³öÎÄ¼þ
-	FILE* fO;
-	uint8* fBuff;				// »º³åÇø
-	uint32 fBuffCnt;
-	uint8* lBuff;
-	uint32 lBuffCnt;
-	uint16* dBuff;
-	uint32 dBuffCnt;
-	uint8* oBuff;
-	uint32 oBuffCnt;
+	uint8* window_;					// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú£ï¿½ï¿½ï¿½Ð¡Îª64Kï¿½ï¿½ï¿½ï¿½ï¿½Ú´ï¿½Å»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	HashTable* lz77_hash_;			// ï¿½ï¿½ï¿½Ú¶ï¿½Ó¦ï¿½Ä¹ï¿½Ï£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å´ï¿½ï¿½ÚµÄ»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½
+	DisHuffman* dis_hfm_tree_;		// Distanceï¿½ï¿½ï¿½ï¿½Huffmanï¿½ï¿½
+	LlHuffman* ll_hfm_tree_;		// literal/lengthï¿½ï¿½ï¿½ï¿½Huffmanï¿½ï¿½
+	FILE* fp_in_;					// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½
+	FILE* fp_out_;
+	uint8* flag_buffer_;			// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	uint32 flag_buffer_cnt_;
+	uint8* ll_buffer_;
+	uint32 ll_buffer_cnt_;
+	uint16* dis_buffer_;
+	uint32 dis_buffer_cnt_;
+	uint8* out_buffer_;
+	uint32 out_buffer_cnt_;
+	uint8 flag_data_;
+	uint8 flag_bit_cnt_;	
+	uint8 out_data_;
+	uint8 out_bit_cnt_;
 };
 
 #endif
