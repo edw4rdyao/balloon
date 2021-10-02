@@ -11,7 +11,7 @@ class Inflate {
 public:
 	Inflate();
 	~Inflate();
-	void Uncompress(std::string file_name, std::string new_file_name);
+	void Uncompress(const char* compressed_file_path_and_name, const char* uncompressed_file_path);
 	uint16 EncodeALl();
 	uint16 EncodeADis();
 	inline uint8 InBit();
@@ -22,7 +22,7 @@ private:
 	FILE* fp_out_;		
 	uint8* out_buffer_;				// ������
 	uint32 out_buffer_cnt_;
-	uint8 in_data_ = 0;			// 8bits������Ϣ
+	uint8 in_data_ = 0;				// 8bits������Ϣ
 	uint8 in_bit_cnt_ = 0;			// ������Ϣ�Ѿ�������bitλ��
 };
 

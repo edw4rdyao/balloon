@@ -144,15 +144,15 @@ void LlHuffman::GetHfmCode(){
 	bitstring code = "0";
 	next_len_code_[1] = "0";
 	for (int32 i = 2; i < LL_MAX_CODELENGTH; i++) {
-		code = BitstringAdd(code, IntToBitstring(ic_code_len_cnt_[i - 1], 0, true));
-		BitstringShiftLeft(code, 1);
+		code = BitString::BitstringAdd(code, BitString::IntToBitstring(ic_code_len_cnt_[i - 1], 0, true));
+		BitString::BitstringShiftLeft(code, 1);
 		next_len_code_[i] = code;
 	}
 	// �õ�ÿ�������������
 	for (int32 i = 0; i < LL_CODENUM; i++) {
 		if (ic_code_len_[i] > 0) {
 			ic_code_[i] = next_len_code_[ic_code_len_[i]];
-			next_len_code_[ic_code_len_[i]]  = BitstringAdd(next_len_code_[ic_code_len_[i]], IntToBitstring(1, 0, true));
+			next_len_code_[ic_code_len_[i]]  = BitString::BitstringAdd(next_len_code_[ic_code_len_[i]], BitString::IntToBitstring(1, 0, true));
 		}
 	}
 	// debug

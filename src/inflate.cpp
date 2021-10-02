@@ -13,17 +13,18 @@ Inflate::~Inflate(){
 	delete[] out_buffer_;
 }
 
-void Inflate::Uncompress(std::string file_name, std::string new_file_name){
-	// ����������ļ�
-	fp_in_ = fopen(file_name.c_str(), "rb");
+void Inflate::Uncompress(	const char* compressed_file_path_and_name, 
+							const char* uncompressed_file_path){
+	// open the compressed file
+	fp_in_ = fopen(compressed_file_path_and_name, "rb");
 	assert(fp_in_);
-	fp_out_ = fopen(new_file_name.c_str(), "wb");
+	fp_out_ = fopen(uncompressed_file_path, "wb");
 	assert(fp_out_);
 
 	uint64 file_size = 0;	// ԭ�ļ���С
 	uint64 inflate_cnt = 0;	// �ѽ�ѹ�ļ���С
 
-	// ��ȡԭ�ļ���С
+	// read the original file size
 	fread(&file_size, sizeof(uint64), 1, fp_in_);
 
 	while (inflate_cnt < file_size) {

@@ -1,6 +1,6 @@
 #include "universal.h"
 
-bitstring IntToBitstring(uint32 i, uint16 l, bool b){
+bitstring BitString::IntToBitstring(uint32 i, uint16 l, bool b){
 	bitstring r;
 	if (b) {
 		do {
@@ -17,14 +17,14 @@ bitstring IntToBitstring(uint32 i, uint16 l, bool b){
 	return r;
 }
 
-void BitstringShiftLeft(bitstring& b, uint16 l){
+void BitString::BitstringShiftLeft(bitstring& b, uint16 l){
 	while (l--) {
 		b += "0";
 	}
 	return ;
 }
 
-bitstring BitstringAdd(const bitstring& a, const bitstring& b){
+bitstring BitString::BitstringAdd(const bitstring& a, const bitstring& b){
 	int32 la = a.length(), lb = b.length(), c = 0, s = 0;
 	bitstring r;
 	while (la > 0 || lb > 0) {

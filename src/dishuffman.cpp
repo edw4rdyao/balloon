@@ -170,7 +170,7 @@ void DisHuffman::GetHfmCode(){
 	}
 	// �õ�ÿ����������ַ���������
 	for (int32 i = 0; i < D_CODENUM; i ++) {
-		ic_code_[i]=IntToBitstring(ic_code_int_[i], ic_code_len_[i], false);
+		ic_code_[i] = BitString::IntToBitstring(ic_code_int_[i], ic_code_len_[i], false);
 	}
 
 	// debug

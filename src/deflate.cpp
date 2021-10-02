@@ -1,4 +1,5 @@
 #include "deflate.h"
+
 Deflate::Deflate():
 	window_(new uint8[2 * WSIZE]),			lz77_hash_(new HashTable(WSIZE)), 
 	dis_hfm_tree_(new DisHuffman), 			ll_hfm_tree_(new LlHuffman),
@@ -25,20 +26,24 @@ Deflate::~Deflate() {
 /*=========================================================
 
 =========================================================*/
-void Deflate::Compress(std::string file_name, std::string new_file_name) {
-	// ���ļ�
-	fp_out_ = fopen(new_file_name.c_str(), "wb");
-	assert(fp_out_);
-	fp_in_ = fopen(file_name.c_str(), "rb");
+void Deflate::Compress(	const char* origin_file_path_and_name, 
+						const char* compressed_file_path_and_name, 
+						const char* origin_file_name) {
+	// open the original file and the file to be compressed
+	fp_in_ = fopen(origin_file_path_and_name, "rb");
 	assert(fp_in_);
+	fp_out_ = fopen(compressed_file_path_and_name, "wb");
+	assert(fp_out_);
 
-	// ��ȡԭʼ�ļ���С����������ļ�
+	// TODO: output the original filename and the extention name into the compressfile...
+
+	// output the original file's size into the compressed file
 	fseek(fp_in_, 0, SEEK_END);
 	uint64 file_size = ftell(fp_in_);
-	fwrite(&file_size, sizeof(uint64), 1, fp_out_);
 	fseek(fp_in_, 0, SEEK_SET);
+	fwrite(&file_size, sizeof(uint64), 1, fp_out_);
 
-	// �ȴ��ļ��ж�ȡ64K���ֽ�
+	// 
 	auto look_ahead = fread(window_, 1, WSIZE * 2, fp_in_);
 
 	// ��ʼ����ϣ��ַ

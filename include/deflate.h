@@ -12,7 +12,7 @@ class Deflate {
 public:
 	Deflate();
 	~Deflate();
-	void Compress(std::string file_name, std::string new_file_name);
+	void Compress(const char* origin_file_path_and_name, const char* compressed_file_path_and_name, const char* origin_file_name);
 	void MoveWindow(size_t& look_ahead, uint16& str_start);
 	uint16 GetMaxMatchLength(uint16 match_head, uint16& t_match_dis, uint16 str_start, uint32 look_ahead);
 	void WriteFlag(bool is_encoded);
@@ -25,18 +25,12 @@ private:
 	LlHuffman* ll_hfm_tree_;		// literal/length����Huffman��
 	FILE* fp_in_;					// ��������ļ�
 	FILE* fp_out_;
-	uint8* flag_buffer_;			// ������
-	uint32 flag_buffer_cnt_;
-	uint8* ll_buffer_;
-	uint32 ll_buffer_cnt_;
-	uint16* dis_buffer_;
-	uint32 dis_buffer_cnt_;
-	uint8* out_buffer_;
-	uint32 out_buffer_cnt_;
-	uint8 flag_data_;
-	uint8 flag_bit_cnt_;	
-	uint8 out_data_;
-	uint8 out_bit_cnt_;
+	uint8* flag_buffer_;uint32 flag_buffer_cnt_;
+	uint8* ll_buffer_;	uint32 ll_buffer_cnt_;
+	uint16* dis_buffer_;uint32 dis_buffer_cnt_;
+	uint8* out_buffer_;	uint32 out_buffer_cnt_;
+	uint8 flag_data_;	uint8 flag_bit_cnt_;	
+	uint8 out_data_;	uint8 out_bit_cnt_;
 };
 
 #endif
