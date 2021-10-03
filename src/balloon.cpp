@@ -8,21 +8,33 @@
 
 int DeflateWork(const char* filepath){
 	// parser the file_path into : drive letter, directory path, filename, filename extension
-   	// char drive[_MAX_DRIVE];  
-   	// char dir[_MAX_DIR];  
-   	// char fname[_MAX_FNAME];  
-   	// char ext[_MAX_EXT];
-	// _splitpath(file_path, );
+	char drive[_MAX_DRIVE];
+   	char directory[_MAX_DIR];
+   	char filename[_MAX_FNAME];
+   	char extention[_MAX_EXT];
+	_splitpath(filepath, drive, directory, filename, extention);
+	// splice the directory and the filename(whose extention name is .bal) to open the copmressed file
+	strcat(directory, filename);
+	const char* balloon_extention = ".bal";
+	strcat(directory, balloon_extention);
+	// splice the filename and its original extention name, which is to be saved in compressed file
+	strcat(filename, extention);
+	// compress file begin
 	Deflate deflate;
-	deflate.Compress("./test/1.txt", "./test/1.bal", "1.txt");
+	deflate.Compress(filepath, directory, filename);
 	return 0;
 }
 
 int InflateWork(const char* filepath){
 	// parser the filepath into : drive letter, directory path, filename, filename extension
-
-	Inflate inflate;
-	inflate.Uncompress("./test/1.bal", "./test/1t.txt");
+	char drive[_MAX_DRIVE];
+   	char directory[_MAX_DIR];
+   	char filename[_MAX_FNAME];
+   	char extention[_MAX_EXT];
+	_splitpath(filepath, drive, directory, filename, extention);
+	// uncompress file begin
+	// Inflate inflate;
+	// inflate.Uncompress(filepath, directory);
 	return 0;
 }
 

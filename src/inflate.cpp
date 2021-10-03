@@ -17,9 +17,15 @@ void Inflate::Uncompress(	const char* compressed_file_path_and_name,
 							const char* uncompressed_file_path){
 	// open the compressed file
 	fp_in_ = fopen(compressed_file_path_and_name, "rb");
-	assert(fp_in_);
+	if(NULL == fp_in_){
+		std::cout << "Open file: " << compressed_file_path_and_name << " failed!\n";
+		assert(0);
+	}
 	fp_out_ = fopen(uncompressed_file_path, "wb");
-	assert(fp_out_);
+	if(NULL == fp_out_){
+		std::cout << "Open file: " << uncompressed_file_path << " failed!\n";
+		assert(0);
+	}
 
 	uint64 file_size = 0;	// ԭ�ļ���С
 	uint64 inflate_cnt = 0;	// �ѽ�ѹ�ļ���С

@@ -31,9 +31,15 @@ void Deflate::Compress(	const char* origin_file_path_and_name,
 						const char* origin_file_name) {
 	// open the original file and the file to be compressed
 	fp_in_ = fopen(origin_file_path_and_name, "rb");
-	assert(fp_in_);
+	if(NULL == fp_in_){
+		std::cout << "Open file: " << origin_file_path_and_name << " failed!\n";
+		assert(0);
+	}
 	fp_out_ = fopen(compressed_file_path_and_name, "wb");
-	assert(fp_out_);
+	if(NULL == fp_out_){
+		std::cout << "Open file: " << compressed_file_path_and_name << " failed!\n";
+		assert(0);
+	}
 
 	// TODO: output the original filename and the extention name into the compressfile...
 
