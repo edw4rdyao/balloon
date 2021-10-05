@@ -14,13 +14,22 @@ Inflate::~Inflate(){
 }
 
 void Inflate::Uncompress(	const char* compressed_file_path_and_name, 
-							const char* uncompressed_file_path){
+							char* uncompressed_file_path){
 	// open the compressed file
 	fp_in_ = fopen(compressed_file_path_and_name, "rb");
 	if(NULL == fp_in_){
 		std::cout << "Open file: " << compressed_file_path_and_name << " failed!\n";
 		assert(0);
 	}
+	// read the original filename int the input file
+	char original_file_name[_MAX_FNAME];
+	char ch;	int32 i = 0;
+	do{
+		ch = getc(fp_in_);
+		original_file_name[i++] = ch;
+	}while(ch != '\0');// when read the '\0', the flag of end of the original filename
+	strcat(uncompressed_file_path, original_file_name);
+	// open the uncompressed file
 	fp_out_ = fopen(uncompressed_file_path, "wb");
 	if(NULL == fp_out_){
 		std::cout << "Open file: " << uncompressed_file_path << " failed!\n";

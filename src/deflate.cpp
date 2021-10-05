@@ -1,4 +1,5 @@
 #include "deflate.h"
+// TODO: add english commont...
 
 Deflate::Deflate():
 	window_(new uint8[2 * WSIZE]),			lz77_hash_(new HashTable(WSIZE)), 
@@ -40,8 +41,12 @@ void Deflate::Compress(	const char* origin_file_path_and_name,
 		std::cout << "Open file: " << compressed_file_path_and_name << " failed!\n";
 		assert(0);
 	}
-
-	// TODO: output the original filename and the extention name into the compressfile...
+	// output the original filename and the extention name into the compressfile...
+	for(int32 i = 0; origin_file_name[i] != '\0'; i++){
+		fputc(origin_file_name[i], fp_out_);
+	}
+	// output a '\0' as file_name end flag
+	fputc('\0', fp_out_);
 
 	// output the original file's size into the compressed file
 	fseek(fp_in_, 0, SEEK_END);
@@ -123,10 +128,7 @@ void Deflate::Compress(	const char* origin_file_path_and_name,
 }
 
 /*=========================================================
-���ܣ�	������ƥ�䴮
-����ֵ��	���ƥ�䳤��
-������	ͨ��ƥ�������ϲ��ҵõ��ƥ�䳤�ȵ�ƥ�䴮������Ҫͨ����
-		��ƥ������Է�ֹ������ѭ��
+
 =========================================================*/
 uint16 Deflate::GetMaxMatchLength(uint16 match_head, uint16& t_match_dis, uint16 str_start, uint32 look_ahead) {
 	uint16 t_match_len = 0;				// ÿ��ƥ��ĳ���
@@ -186,10 +188,7 @@ void Deflate::MoveWindow(size_t& look_ahead, uint16& str_start) {
 
 
 /*=========================================================
-���ܣ�	д������Ϣ
-����ֵ��	void
-������	ͨ���ж��ַ��Ƿ�<���ȣ�����>���滻�����򻺳���fBuffд���
-		����Ϣ����0��ʾδ���滻����1��ʾ�ѱ��滻
+
 =========================================================*/
 void Deflate::WriteFlag(bool is_encoded) {
 	// ������һλ����Ϊlength�����¼1
@@ -210,9 +209,7 @@ void Deflate::WriteFlag(bool is_encoded) {
 }
 
 /*=========================================================
-���ܣ�	���Huffman�����ļ���������
-����ֵ��	void
-������	���ÿ����Ϣд�뻺�����������Huffman�������
+
 =========================================================*/
 void Deflate::OutHuffman(){
 	// ��256��������
@@ -327,9 +324,7 @@ void Deflate::OutHuffman(){
 }
 
 /*=========================================================
-���ܣ�	���һ��bit��������
-����ֵ��	void
-������	���һ��bitλ�����������������8λʱ���һ���ֽ�
+
 =========================================================*/
 void Deflate::OutBit(bool bit){
 	out_data_ <<= 1;

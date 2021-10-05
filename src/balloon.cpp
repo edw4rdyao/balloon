@@ -32,9 +32,14 @@ int InflateWork(const char* filepath){
    	char filename[_MAX_FNAME];
    	char extention[_MAX_EXT];
 	_splitpath(filepath, drive, directory, filename, extention);
+	// if the file extention name is not ".bal"
+	if(strcmp(extention, ".bal")){
+		std::cout << "Sorry, ballon only supports the '.bal' file format to be uncompressed!\n";
+		return 0;
+	}
 	// uncompress file begin
-	// Inflate inflate;
-	// inflate.Uncompress(filepath, directory);
+	Inflate inflate;
+	inflate.Uncompress(filepath, directory);
 	return 0;
 }
 

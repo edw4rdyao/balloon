@@ -11,7 +11,7 @@ class Inflate {
 public:
 	Inflate();
 	~Inflate();
-	void Uncompress(const char* compressed_file_path_and_name, const char* uncompressed_file_path);
+	void Uncompress(const char* compressed_file_path_and_name, char* uncompressed_file_path);
 	uint16 EncodeALl();
 	uint16 EncodeADis();
 	inline uint8 InBit();

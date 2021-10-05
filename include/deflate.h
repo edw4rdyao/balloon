@@ -29,7 +29,7 @@ private:
 	uint8* ll_buffer_;	uint32 ll_buffer_cnt_;
 	uint16* dis_buffer_;uint32 dis_buffer_cnt_;
 	uint8* out_buffer_;	uint32 out_buffer_cnt_;
-	uint8 flag_data_;	uint8 flag_bit_cnt_;	
+	uint8 flag_data_;	uint8 flag_bit_cnt_;
 	uint8 out_data_;	uint8 out_bit_cnt_;
 };
 
