@@ -68,7 +68,7 @@ void Deflate::Compress(	const char* origin_file_path_and_name,
 	uint16 t_match_dis = 0;	// ��ǰƥ�����
 
 	while (look_ahead) {
-		// �������ַ��ַ����е����һ���ַ��Լ����ϣ��ַ
+ 		// �������ַ��ַ����е����һ���ַ��Լ����ϣ��ַ
 		lz77_hash_->Insert(match_head, window_[str_start + 2], str_start, hash_address);
 		t_match_len = 0;
 		t_match_dis = 0;
